@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AquaSentry — Tank Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="scanlines"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">◈</span>
+    <div>
+      <h1>AQUA<span>SENTRY</span></h1>
+      <p class="brand-sub">Tank Level Monitoring &amp; Alarm Console</p>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="status-pill" id="statusPill" data-status="NORMAL">
+      <span class="dot"></span>
+      <span id="statusText">NORMAL</span>
+    </div>
+  </div>
+</header>
+
+<div class="alarm-banner" id="alarmBanner">
+  <span id="alarmBannerText">ALARM</span>
+</div>
+
+<main class="grid">
+
+  <!-- ============ TANK VESSEL (signature element) ============ -->
+  <section class="panel tank-panel">
+    <div class="panel-label"><span>01</span> VESSEL</div>
+    <div class="tank-wrap">
+      <svg viewBox="0 0 220 340" class="tank-svg" id="tankSvg">
+        <defs>
+          <clipPath id="tankClip">
+            <rect x="18" y="18" width="184" height="290" rx="10" />
+          </clipPath>
+          <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#5EEAD4" />
+            <stop offset="100%" stop-color="#0891B2" />
+          </linearGradient>
+        </defs>
+
+        <!-- threshold guide lines -->
+        <line id="highLine" x1="14" x2="206" y1="0" y2="0" class="guide-line high" stroke-dasharray="4 4"/>
+        <line id="lowLine" x1="14" x2="206" y1="0" y2="0" class="guide-line low" stroke-dasharray="4 4"/>
+
+        <!-- tank body -->
+        <rect x="18" y="18" width="184" height="290" rx="10" class="tank-shell" />
+
+        <g clip-path="url(#tankClip)">
+          <rect id="waterBody" x="18" width="184" height="0" y="308" fill="url(#waterGrad)"/>
+          <path id="waterWave" d="M18,308 Q 55,300 92,308 T 166,308 T 202,308 V320 H18 Z" fill="#7DF3E1" opacity="0.55"/>
+        </g>
+
+        <rect x="18" y="18" width="184" height="290" rx="10" class="tank-shell-outline" />
+
+        <!-- tick marks -->
+        <g class="ticks" font-family="JetBrains Mono">
+          <text x="6" y="24" class="tick-label">100</text>
+          <text x="12" y="96" class="tick-label">75</text>
+          <text x="12" y="167" class="tick-label">50</text>
+          <text x="12" y="238" class="tick-label">25</text>
+          <text x="12" y="308" class="tick-label">0</text>
+        </g>
+
+        <!-- sensor housing at top -->
+        <rect x="88" y="4" width="44" height="16" rx="3" class="sensor-housing"/>
+        <circle id="sensorPulse" cx="110" cy="12" r="3" class="sensor-pulse"/>
+      </svg>
+    </div>
+    <div class="tank-caption">
+      <span id="levelCm">0.0</span> cm &nbsp;/&nbsp; <span id="tankHeight">150</span> cm
+    </div>
+  </section>
+
+  <!-- ============ READOUT + GAUGE ============ -->
+  <section class="panel readout-panel">
+    <div class="panel-label"><span>02</span> READOUT</div>
+
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 200 200" class="gauge-svg">
+        <circle cx="100" cy="100" r="86" class="gauge-track"/>
+        <circle cx="100" cy="100" r="86" class="gauge-fill" id="gaugeFill"/>
+      </svg>
+      <div class="gauge-center">
+        <div class="gauge-value" id="levelPercent">0.0<span>%</span></div>
+        <div class="gauge-trend" id="trendText">IDLE</div>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <span class="metric-label">Volume</span>
+        <span class="metric-value" id="volumeLiters">0.0 L</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Distance</span>
+        <span class="metric-value" id="distanceCm">0.0 cm</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Updated</span>
+        <span class="metric-value" id="lastUpdated">--:--:--</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CONTROLS ============ -->
+  <section class="panel control-panel">
+    <div class="panel-label"><span>03</span> CONTROLS</div>
+
+    <div class="control-group">
+      <label>Low alarm threshold — <span id="lowVal">20</span>%</label>
+      <input type="range" id="lowSlider" min="0" max="100" value="20">
+    </div>
+    <div class="control-group">
+      <label>High alarm threshold — <span id="highVal">90</span>%</label>
+      <input type="range" id="highSlider" min="0" max="100" value="90">
+    </div>
+
+    <div class="mode-buttons" id="modeButtons">
+      <button data-mode="AUTO" class="active">AUTO</button>
+      <button data-mode="FILL">FILL</button>
+      <button data-mode="DRAIN">DRAIN</button>
+      <button data-mode="HOLD">HOLD</button>
+    </div>
+
+    <p class="control-note">Simulated ultrasonic sensor · updates every 1.5s</p>
+  </section>
+
+  <!-- ============ EVENT LOG ============ -->
+  <section class="panel log-panel">
+    <div class="panel-label"><span>04</span> EVENT LOG</div>
+    <ul class="log-list" id="logList">
+      <li class="log-empty">No events yet.</li>
+    </ul>
+  </section>
+
+</main>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
